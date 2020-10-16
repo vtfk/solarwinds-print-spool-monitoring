@@ -1,0 +1,474 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfApplicationTemplate xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.solarwinds.com/2007/08/APM">
+	<ApplicationTemplate>
+		<Settings xmlns:s="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
+			<s:KeyValueOfstringSettingValueyR_SGpLPx>
+				<s:Key>__DebugLoggingEnabled</s:Key>
+				<s:Value>
+					<Required>true</Required>
+					<SettingLevel>Template</SettingLevel>
+					<Value>False</Value>
+					<ValueType>Boolean</ValueType>
+					<Key i:nil="true" />
+				</s:Value>
+			</s:KeyValueOfstringSettingValueyR_SGpLPx>
+			<s:KeyValueOfstringSettingValueyR_SGpLPx>
+				<s:Key>__NumberOfLogFilesToKeep</s:Key>
+				<s:Value>
+					<Required>true</Required>
+					<SettingLevel>Template</SettingLevel>
+					<Value>30</Value>
+					<ValueType>Integer</ValueType>
+					<Key i:nil="true" />
+				</s:Value>
+			</s:KeyValueOfstringSettingValueyR_SGpLPx>
+			<s:KeyValueOfstringSettingValueyR_SGpLPx>
+				<s:Key>__Timeout</s:Key>
+				<s:Value>
+					<Required>true</Required>
+					<SettingLevel>Template</SettingLevel>
+					<Value>60</Value>
+					<ValueType>Integer</ValueType>
+					<Key i:nil="true" />
+				</s:Value>
+			</s:KeyValueOfstringSettingValueyR_SGpLPx>
+			<s:KeyValueOfstringSettingValueyR_SGpLPx>
+				<s:Key>__Use64Bit</s:Key>
+				<s:Value>
+					<Required>true</Required>
+					<SettingLevel>Template</SettingLevel>
+					<Value>False</Value>
+					<ValueType>Boolean</ValueType>
+					<Key i:nil="true" />
+				</s:Value>
+			</s:KeyValueOfstringSettingValueyR_SGpLPx>
+		</Settings>
+		<ComponentTemplates>
+			<ComponentTemplate>
+				<ComponentOrder>1</ComponentOrder>
+				<Id>5278</Id>
+				<Name>Print Spooler jobs</Name>
+				<Settings xmlns:s="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>__Disabled</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>False</Value>
+							<ValueType>Boolean</ValueType>
+							<Key>__Disabled</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>__UserNotes</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value></Value>
+							<ValueType>String</ValueType>
+							<Key>__UserNotes</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>ScriptBody</s:Key>
+						<s:Value>
+							<Required>true</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>  Param (
+    $PrintQueue,
+    $SizeLimit
+)
+
+if (!$PrintQueue -or !$SizeLimit) {
+  Write-Error "Missing required arguments, Expected arguments like 'PRINTER-QUEUE,3000000000'"
+  exit 1
+}
+
+try {
+    $PrintJobs = Get-PrintJob -ComputerName "${Node.DNS}" -PrinterName $PrintQueue
+} catch {
+    Write-Error "Failed to get print jobs from queue: `"$PrintQueue`" at: `"${Node.DNS}`""
+    exit 1
+}
+
+function BytesToHuman {
+    Param (
+        $Size
+    )
+    $1TB = [Math]::Pow(10,12)
+    $1GB = [Math]::Pow(10,9)
+    $1MB = [Math]::Pow(10,6)
+    $1KB = [Math]::Pow(10,3)
+    
+    if ($Size -gt $1TB) { return "$([math]::Round($Size / $1TB, 2)) TB" }
+    if ($Size -gt $1GB) { return "$([math]::Round($Size / $1GB, 2)) GB" }
+    if ($Size -gt $1MB) { return "$([math]::Round($Size / $1MB, 2)) MB" }
+    if ($Size -gt $1KB) { return "$([math]::Round($Size / $1KB, 2)) KB" }
+    return "$($Size) B"
+}
+
+$JobsOverLimit = 0
+$Iteration = 0
+$DisplayMessages = $PrintJobs | ForEach {
+    $Iteration++
+    if ($_.Size -ge $SizeLimit) {
+        $JobsOverLimit++
+        "&lt;tr style=`"color:Red;font-weight:bold;`"&gt;&lt;td&gt;$($_.Id)&lt;/td&gt;&lt;td&gt;$($_.JobStatus)&lt;/td&gt;&lt;td&gt;$(BytesToHuman($_.Size))&lt;/td&gt;&lt;/tr&gt;"
+    } else {
+        "&lt;tr&gt;&lt;td&gt;$($_.Id)&lt;/td&gt;&lt;td&gt;$($_.JobStatus)&lt;/td&gt;&lt;td&gt;$(BytesToHuman($_.Size))&lt;/td&gt;&lt;/tr&gt;"
+    }
+}
+
+$DisplayMessages = "&lt;style type=`"text/css`"&gt;.tg{border-collapse:collapse;border-spacing:0;}.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;overflow:hidden;padding:10px 5px;word-break:normal;}.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}.tg .tg-0lax{text-align:left;vertical-align:top}&lt;/style&gt;&lt;table class=`"tg`"&gt;&lt;thead&gt;&lt;tr&gt;&lt;th class=`"tg-0lax`"&gt;Job ID&lt;/th&gt;&lt;th class=`"tg-0lax`"&gt;Status&lt;/th&gt;&lt;th class=`"tg-0lax`"&gt;Size&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;$DisplayMessages&lt;/tbody&gt;&lt;/table&gt;"
+$DisplayMessages | Set-Clipboard
+
+Write-Host "Message.AllJobs: $DisplayMessages"
+Write-Host "Statistic.AllJobs: $(@($PrintJobs).Length)"
+Write-Host "Statistic.JobsOverLimit: $($JobsOverLimit)"
+if ($JobsOverLimit -gt 0) {
+    exit 2
+} else {
+    exit 0
+}  
+</Value>
+							<ValueType>External</ValueType>
+							<Key>ScriptBody</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>__CredentialSetId</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>0</Value>
+							<ValueType>String</ValueType>
+							<Key>__CredentialSetId</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>WrmPort</s:Key>
+						<s:Value>
+							<Required>true</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>5985</Value>
+							<ValueType>Integer</ValueType>
+							<Key>WrmPort</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>WrmUseSSL</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>false</Value>
+							<ValueType>Boolean</ValueType>
+							<Key>WrmUseSSL</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>CountAsDifference</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>false</Value>
+							<ValueType>Boolean</ValueType>
+							<Key>CountAsDifference</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>ImpersonateForLocalMode</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>false</Value>
+							<ValueType>Boolean</ValueType>
+							<Key>ImpersonateForLocalMode</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>__UserDescription</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>Gets all jobs from specified printer queue and alerts when one or more jobs' document size are over the specified limit.
+Specify queue and size (in bytes) limit in "Script Arguments" as follows (without the quotes)
+Queue,Size
+"PRINT-QUEUE-NAME",3000000000"</Value>
+							<ValueType>String</ValueType>
+							<Key>__UserDescription</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>ExecutionMode</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>LocalHost</Value>
+							<ValueType>Option</ValueType>
+							<Key>ExecutionMode</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>ScriptArguments</s:Key>
+						<s:Value>
+							<Required>false</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>PRINTER-QUEUE,3000000000</Value>
+							<ValueType>String</ValueType>
+							<Key>ScriptArguments</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>StatusRollupType</s:Key>
+						<s:Value>
+							<Required>true</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>Worst</Value>
+							<ValueType>Option</ValueType>
+							<Key>StatusRollupType</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+					<s:KeyValueOfstringSettingValueyR_SGpLPx>
+						<s:Key>WrmUrlPrefix</s:Key>
+						<s:Value>
+							<Required>true</Required>
+							<SettingLevel>Template</SettingLevel>
+							<Value>wsman</Value>
+							<ValueType>String</ValueType>
+							<Key>WrmUrlPrefix</Key>
+						</s:Value>
+					</s:KeyValueOfstringSettingValueyR_SGpLPx>
+				</Settings>
+				<Type>PowerShell</Type>
+				<Thresholds />
+				<EvidenceType>None</EvidenceType>
+				<CategoryDisplayName></CategoryDisplayName>
+				<ComponentCategoryId i:nil="true" />
+				<DynamicColumnSettings>
+					<DynamicEvidenceColumnSchema>
+						<Cells />
+						<ComponentID>-1</ComponentID>
+						<ComponentTemplateID>5278</ComponentTemplateID>
+						<DataTransform />
+						<DataTransformOverridden>false</DataTransformOverridden>
+						<Disabled>false</Disabled>
+						<ID>2763</ID>
+						<Label>All Jobs</Label>
+						<LabelOverridden>false</LabelOverridden>
+						<Name>AllJobs</Name>
+						<ParentID>-1</ParentID>
+						<Threshold>
+							<AreHigherValuesBetter>false</AreHigherValuesBetter>
+							<BaselineApplyError></BaselineApplyError>
+							<ComputeBaseline>true</ComputeBaseline>
+							<CriticalFormula></CriticalFormula>
+							<CriticalLevel>1.7976931348623157E+308</CriticalLevel>
+							<CriticalPolls>1</CriticalPolls>
+							<CriticalPollsInterval>1</CriticalPollsInterval>
+							<IsForParentComponent>false</IsForParentComponent>
+							<IsForTemplate>false</IsForTemplate>
+							<MaxValue>100</MaxValue>
+							<Name></Name>
+							<WarnLevel>1.7976931348623157E+308</WarnLevel>
+							<WarningFormula></WarningFormula>
+							<WarningPolls>1</WarningPolls>
+							<WarningPollsInterval>1</WarningPollsInterval>
+							<ThresholdOperator>Greater</ThresholdOperator>
+						</Threshold>
+						<ThresholdOverridden>false</ThresholdOverridden>
+						<Type>String</Type>
+					</DynamicEvidenceColumnSchema>
+					<DynamicEvidenceColumnSchema>
+						<Cells />
+						<ComponentID>-1</ComponentID>
+						<ComponentTemplateID>5278</ComponentTemplateID>
+						<DataTransform>
+							<CommonFormulaOptions>0</CommonFormulaOptions>
+							<TransformExpression></TransformExpression>
+						</DataTransform>
+						<DataTransformOverridden>false</DataTransformOverridden>
+						<Disabled>false</Disabled>
+						<ID>2764</ID>
+						<Label>All Jobs</Label>
+						<LabelOverridden>false</LabelOverridden>
+						<Name>AllJobs</Name>
+						<ParentID>-1</ParentID>
+						<Threshold>
+							<AreHigherValuesBetter>false</AreHigherValuesBetter>
+							<BaselineApplyError></BaselineApplyError>
+							<ComputeBaseline>true</ComputeBaseline>
+							<CriticalFormula></CriticalFormula>
+							<CriticalLevel>0</CriticalLevel>
+							<CriticalPolls>1</CriticalPolls>
+							<CriticalPollsInterval>1</CriticalPollsInterval>
+							<IsForParentComponent>false</IsForParentComponent>
+							<IsForTemplate>false</IsForTemplate>
+							<MaxValue>100</MaxValue>
+							<Name></Name>
+							<WarnLevel>0</WarnLevel>
+							<WarningFormula></WarningFormula>
+							<WarningPolls>1</WarningPolls>
+							<WarningPollsInterval>1</WarningPollsInterval>
+							<ThresholdOperator>Less</ThresholdOperator>
+						</Threshold>
+						<ThresholdOverridden>false</ThresholdOverridden>
+						<Type>Numeric</Type>
+					</DynamicEvidenceColumnSchema>
+					<DynamicEvidenceColumnSchema>
+						<Cells />
+						<ComponentID>-1</ComponentID>
+						<ComponentTemplateID>5278</ComponentTemplateID>
+						<DataTransform>
+							<CommonFormulaOptions>0</CommonFormulaOptions>
+							<TransformExpression></TransformExpression>
+						</DataTransform>
+						<DataTransformOverridden>false</DataTransformOverridden>
+						<Disabled>false</Disabled>
+						<ID>2765</ID>
+						<Label>JobsOverLimit</Label>
+						<LabelOverridden>false</LabelOverridden>
+						<Name>JobsOverLimit</Name>
+						<ParentID>-1</ParentID>
+						<Threshold>
+							<AreHigherValuesBetter>false</AreHigherValuesBetter>
+							<BaselineApplyError></BaselineApplyError>
+							<ComputeBaseline>true</ComputeBaseline>
+							<CriticalFormula></CriticalFormula>
+							<CriticalLevel>3</CriticalLevel>
+							<CriticalPolls>1</CriticalPolls>
+							<CriticalPollsInterval>1</CriticalPollsInterval>
+							<IsForParentComponent>false</IsForParentComponent>
+							<IsForTemplate>false</IsForTemplate>
+							<MaxValue>100</MaxValue>
+							<Name></Name>
+							<WarnLevel>1</WarnLevel>
+							<WarningFormula></WarningFormula>
+							<WarningPolls>1</WarningPolls>
+							<WarningPollsInterval>1</WarningPollsInterval>
+							<ThresholdOperator>GreaterOrEqual</ThresholdOperator>
+						</Threshold>
+						<ThresholdOverridden>false</ThresholdOverridden>
+						<Type>Numeric</Type>
+					</DynamicEvidenceColumnSchema>
+				</DynamicColumnSettings>
+				<VisibilityMode>Visible</VisibilityMode>
+				<ShortName></ShortName>
+				<ApplicationItemType></ApplicationItemType>
+				<ApplicationTemplateId>316</ApplicationTemplateId>
+				<UniqueId>eac06e1e-91a7-4276-9b3e-598cf4f0b5c5</UniqueId>
+				<ComponentCategoryName i:nil="true" />
+				<IsApplicationItemSpecific>false</IsApplicationItemSpecific>
+			</ComponentTemplate>
+		</ComponentTemplates>
+		<DeletedComponentTemplates />
+		<Id>316</Id>
+		<Name>Printer spool jobs</Name>
+		<IsMockTemplate>false</IsMockTemplate>
+		<Description></Description>
+		<Tags>
+			<TagInfo>
+				<Name>Print</Name>
+				<TemplateID>316</TemplateID>
+			</TagInfo>
+			<TagInfo>
+				<Name>Windows</Name>
+				<TemplateID>316</TemplateID>
+			</TagInfo>
+		</Tags>
+		<Created>2020-10-15T11:44:44.767Z</Created>
+		<LastModified>2020-10-16T11:05:57.897Z</LastModified>
+		<CustomApplicationType i:nil="true" />
+		<Version>1.0</Version>
+		<ViewID>108</ViewID>
+		<ViewXml>
+			<View Columns="2" ColumnWidth1="693" ColumnWidth2="1267" ColumnWidth3="0" Customizable="true" Group="10000038" GroupName="Print Spooler Jobs" GroupPosition="1" Icon="Overview.png" Key="Printer spool jobs Application Details" System="false" Title="Printer spool jobs Details View" Type="APM Application Details" xmlns="http://solarwinds.com/orion/web/view/1">
+				<Resources xmlns="">
+					<Resource Column="1" File="~/Orion/APM/Resources/Application/ApplicationDetails.ascx" Name="APM Application Details" Position="1" SubTitle="" Title="Application Details">
+						<Properties>
+							<Property Name="defaulttitle" Value="Application Details"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="1" File="~/Orion/APM/Resources/Application/ApplicationEvents.ascx" Name="Last XX Application Events" Position="2" SubTitle="" Title="Last XX Application Events">
+						<Properties>
+							<Property Name="defaulttitle" Value="Last XX Application Events"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="1" File="~/Orion/APM/Resources/Application/ApplicationAlerts.ascx" Name="Active Application Alerts" Position="3" SubTitle="" Title="Active Application Alerts">
+						<Properties>
+							<Property Name="defaulttitle" Value="Active Application Alerts"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="1" File="/Orion/NetPerfMon/Resources/NodeDetails/NodeDetails.ascx" Name="Node Details" Position="4" SubTitle="" Title="Summary">
+						<Properties>
+							<Property Name="defaulttitle" Value="Summary"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="1" File="~/Orion/APM/Resources/Application/ApplicationCustomProperties.ascx" Name="Application Custom Properties" Position="5" SubTitle="" Title="Application Custom Properties">
+						<Properties>
+							<Property Name="defaulttitle" Value="Application Custom Properties"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="1" File="/Orion/APM/Resources/Application/AvailabilityStatistics.ascx" Name="Availability Statistics" Position="6" SubTitle="" Title="Availability Statistics">
+						<Properties>
+							<Property Name="defaulttitle" Value="Availability Statistics"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="2" File="/Orion/NetPerfMon/Resources/Reports/ReportTableWrapper.ascx" Name="Custom Table" Position="1" SubTitle="" Title="Print jobs">
+						<Properties>
+							<Property Name="timeframe" Value="&lt;TimeFrame xmlns:i=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xmlns=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Timing&quot;&gt;&#xD;&#xA;  &lt;DisplayName&gt;Today&lt;/DisplayName&gt;&#xD;&#xA;  &lt;IsStatic&gt;false&lt;/IsStatic&gt;&#xD;&#xA;  &lt;RefId&gt;011ec06c-84cf-435f-8604-3a14698cbb80&lt;/RefId&gt;&#xD;&#xA;  &lt;Relative&gt;&#xD;&#xA;    &lt;NamedTimeFrame&gt;Today&lt;/NamedTimeFrame&gt;&#xD;&#xA;    &lt;Unit&gt;NotSpecified&lt;/Unit&gt;&#xD;&#xA;    &lt;UnitCount&gt;0&lt;/UnitCount&gt;&#xD;&#xA;  &lt;/Relative&gt;&#xD;&#xA;  &lt;Static i:nil=&quot;true&quot; /&gt;&#xD;&#xA;&lt;/TimeFrame&gt;"></Property>
+							<Property Name="title" Value="Print jobs"></Property>
+							<Property Name="defaulttitle" Value="Custom Table"></Property>
+							<Property Name="configurationdata" Value="&lt;TableConfiguration xmlns=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Tables&quot; xmlns:i=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;&gt;&lt;DisplaySubTitle i:nil=&quot;true&quot; xmlns=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Data&quot;/&gt;&lt;DisplayTitle i:nil=&quot;true&quot; xmlns=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Data&quot;/&gt;&lt;RefId xmlns=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Data&quot;&gt;8371b482-12eb-4b53-a2bb-1fe912218805&lt;/RefId&gt;&lt;Columns&gt;&lt;TableColumn&gt;&lt;CellStyle xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;&gt;&lt;a:BackgroundColor i:nil=&quot;true&quot;/&gt;&lt;a:Borders i:nil=&quot;true&quot;/&gt;&lt;a:DisplayName i:nil=&quot;true&quot;/&gt;&lt;a:Font i:nil=&quot;true&quot;/&gt;&lt;a:Padding i:nil=&quot;true&quot;/&gt;&lt;a:RefId&gt;00000000-0000-0000-0000-000000000000&lt;/a:RefId&gt;&lt;a:TextAlign&gt;Left&lt;/a:TextAlign&gt;&lt;a:ZebraBackgroundColor i:nil=&quot;true&quot;/&gt;&lt;/CellStyle&gt;&lt;DataColumnName i:nil=&quot;true&quot;/&gt;&lt;DisplayName&gt;Name&lt;/DisplayName&gt;&lt;Field xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Selection&quot;&gt;&lt;a:DataTypeInfo xmlns:b=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Data&quot;&gt;&lt;b:ApplicationType i:nil=&quot;true&quot;/&gt;&lt;b:DataType&gt;&lt;b:Data&gt;System.String&lt;/b:Data&gt;&lt;/b:DataType&gt;&lt;b:DeclType&gt;Text&lt;/b:DeclType&gt;&lt;b:DefaultAggregation&gt;NotSpecified&lt;/b:DefaultAggregation&gt;&lt;b:DefaultDataUnitId i:nil=&quot;true&quot;/&gt;&lt;b:DefaultTransformId i:nil=&quot;true&quot;/&gt;&lt;b:Description/&gt;&lt;b:IsFavorite&gt;false&lt;/b:IsFavorite&gt;&lt;b:IsFilterBy&gt;true&lt;/b:IsFilterBy&gt;&lt;b:IsGroupBy&gt;true&lt;/b:IsGroupBy&gt;&lt;b:IsInherited&gt;false&lt;/b:IsInherited&gt;&lt;b:IsManaged&gt;true&lt;/b:IsManaged&gt;&lt;b:IsStatistic&gt;false&lt;/b:IsStatistic&gt;&lt;b:PreviewValue&gt;Service: Distributed Transaction Coordinator&lt;/b:PreviewValue&gt;&lt;b:Units/&gt;&lt;b:UtcTimeIsInLocalTime&gt;false&lt;/b:UtcTimeIsInLocalTime&gt;&lt;/a:DataTypeInfo&gt;&lt;a:DisplayName&gt;Name&lt;/a:DisplayName&gt;&lt;a:NavigationPath&gt;Components&lt;/a:NavigationPath&gt;&lt;a:OwnerDisplayName&gt;Component&lt;/a:OwnerDisplayName&gt;&lt;a:RefID&gt;&lt;a:Data&gt;Orion.APM.Component|Name|Components&lt;/a:Data&gt;&lt;/a:RefID&gt;&lt;/Field&gt;&lt;FixedWidth i:nil=&quot;true&quot;/&gt;&lt;HeaderStyle xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;&gt;&lt;a:BackgroundColor i:nil=&quot;true&quot;/&gt;&lt;a:Borders i:nil=&quot;true&quot;/&gt;&lt;a:DisplayName i:nil=&quot;true&quot;/&gt;&lt;a:Font i:nil=&quot;true&quot;/&gt;&lt;a:Padding i:nil=&quot;true&quot;/&gt;&lt;a:RefId&gt;00000000-0000-0000-0000-000000000000&lt;/a:RefId&gt;&lt;a:TextAlign&gt;Left&lt;/a:TextAlign&gt;&lt;a:ZebraBackgroundColor i:nil=&quot;true&quot;/&gt;&lt;/HeaderStyle&gt;&lt;IsHTMLTagsAllowed&gt;false&lt;/IsHTMLTagsAllowed&gt;&lt;IsHidden&gt;false&lt;/IsHidden&gt;&lt;PercentWidth i:nil=&quot;true&quot;/&gt;&lt;Presenters i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Presentation&quot;/&gt;&lt;PropertyName&gt;Component/Name&lt;/PropertyName&gt;&lt;RefId&gt;c29e996d-fa49-9567-e332-9c1e12c5ffac&lt;/RefId&gt;&lt;Summary&gt;&lt;Calculation&gt;NotSpecified&lt;/Calculation&gt;&lt;CellStyle i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;/&gt;&lt;/Summary&gt;&lt;TransformId/&gt;&lt;ValidRange&gt;NotSpecified&lt;/ValidRange&gt;&lt;/TableColumn&gt;&lt;TableColumn&gt;&lt;CellStyle xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;&gt;&lt;a:BackgroundColor i:nil=&quot;true&quot;/&gt;&lt;a:Borders i:nil=&quot;true&quot;/&gt;&lt;a:DisplayName i:nil=&quot;true&quot;/&gt;&lt;a:Font i:nil=&quot;true&quot;/&gt;&lt;a:Padding i:nil=&quot;true&quot;/&gt;&lt;a:RefId&gt;00000000-0000-0000-0000-000000000000&lt;/a:RefId&gt;&lt;a:TextAlign&gt;Left&lt;/a:TextAlign&gt;&lt;a:ZebraBackgroundColor i:nil=&quot;true&quot;/&gt;&lt;/CellStyle&gt;&lt;DataColumnName i:nil=&quot;true&quot;/&gt;&lt;DisplayName&gt;Status&lt;/DisplayName&gt;&lt;Field xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Selection&quot;&gt;&lt;a:DataTypeInfo xmlns:b=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Data&quot;&gt;&lt;b:ApplicationType&gt;System.Status&lt;/b:ApplicationType&gt;&lt;b:DataType&gt;&lt;b:Data&gt;System.Int32&lt;/b:Data&gt;&lt;/b:DataType&gt;&lt;b:DeclType&gt;Enumerated&lt;/b:DeclType&gt;&lt;b:DefaultAggregation&gt;NotSpecified&lt;/b:DefaultAggregation&gt;&lt;b:DefaultDataUnitId i:nil=&quot;true&quot;/&gt;&lt;b:DefaultTransformId i:nil=&quot;true&quot;/&gt;&lt;b:Description/&gt;&lt;b:IsFavorite&gt;false&lt;/b:IsFavorite&gt;&lt;b:IsFilterBy&gt;true&lt;/b:IsFilterBy&gt;&lt;b:IsGroupBy&gt;true&lt;/b:IsGroupBy&gt;&lt;b:IsInherited&gt;false&lt;/b:IsInherited&gt;&lt;b:IsManaged&gt;true&lt;/b:IsManaged&gt;&lt;b:IsStatistic&gt;false&lt;/b:IsStatistic&gt;&lt;b:PreviewValue&gt;Up&lt;/b:PreviewValue&gt;&lt;b:Units/&gt;&lt;b:UtcTimeIsInLocalTime&gt;false&lt;/b:UtcTimeIsInLocalTime&gt;&lt;/a:DataTypeInfo&gt;&lt;a:DisplayName&gt;Status&lt;/a:DisplayName&gt;&lt;a:NavigationPath&gt;Components&lt;/a:NavigationPath&gt;&lt;a:OwnerDisplayName&gt;Component&lt;/a:OwnerDisplayName&gt;&lt;a:RefID&gt;&lt;a:Data&gt;Orion.APM.Component|Status|Components&lt;/a:Data&gt;&lt;/a:RefID&gt;&lt;/Field&gt;&lt;FixedWidth i:nil=&quot;true&quot;/&gt;&lt;HeaderStyle xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;&gt;&lt;a:BackgroundColor i:nil=&quot;true&quot;/&gt;&lt;a:Borders i:nil=&quot;true&quot;/&gt;&lt;a:DisplayName i:nil=&quot;true&quot;/&gt;&lt;a:Font i:nil=&quot;true&quot;/&gt;&lt;a:Padding i:nil=&quot;true&quot;/&gt;&lt;a:RefId&gt;00000000-0000-0000-0000-000000000000&lt;/a:RefId&gt;&lt;a:TextAlign&gt;Left&lt;/a:TextAlign&gt;&lt;a:ZebraBackgroundColor i:nil=&quot;true&quot;/&gt;&lt;/HeaderStyle&gt;&lt;IsHTMLTagsAllowed&gt;false&lt;/IsHTMLTagsAllowed&gt;&lt;IsHidden&gt;false&lt;/IsHidden&gt;&lt;PercentWidth i:nil=&quot;true&quot;/&gt;&lt;Presenters xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Presentation&quot;&gt;&lt;a:PresenterRef&gt;&lt;a:PresenterId&gt;orion.core.image.status.watermark&lt;/a:PresenterId&gt;&lt;a:Values xmlns:b=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Data&quot;&gt;&lt;b:ContextValue&gt;&lt;b:Name&gt;watermarkSource&lt;/b:Name&gt;&lt;b:Value&gt;Column&lt;/b:Value&gt;&lt;/b:ContextValue&gt;&lt;/a:Values&gt;&lt;/a:PresenterRef&gt;&lt;/Presenters&gt;&lt;PropertyName&gt;Component/Status&lt;/PropertyName&gt;&lt;RefId&gt;07aa52a3-98b3-57dc-62df-4b9c0cbe0f7e&lt;/RefId&gt;&lt;Summary&gt;&lt;Calculation&gt;NotSpecified&lt;/Calculation&gt;&lt;CellStyle i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;/&gt;&lt;/Summary&gt;&lt;TransformId&gt;orion.transformer.status.shortdescription&lt;/TransformId&gt;&lt;ValidRange&gt;NotSpecified&lt;/ValidRange&gt;&lt;/TableColumn&gt;&lt;TableColumn&gt;&lt;CellStyle xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;&gt;&lt;a:BackgroundColor i:nil=&quot;true&quot;/&gt;&lt;a:Borders i:nil=&quot;true&quot;/&gt;&lt;a:DisplayName i:nil=&quot;true&quot;/&gt;&lt;a:Font i:nil=&quot;true&quot;/&gt;&lt;a:Padding i:nil=&quot;true&quot;/&gt;&lt;a:RefId&gt;00000000-0000-0000-0000-000000000000&lt;/a:RefId&gt;&lt;a:TextAlign&gt;Left&lt;/a:TextAlign&gt;&lt;a:ZebraBackgroundColor i:nil=&quot;true&quot;/&gt;&lt;/CellStyle&gt;&lt;DataColumnName i:nil=&quot;true&quot;/&gt;&lt;DisplayName&gt;Jobs&lt;/DisplayName&gt;&lt;Field xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Selection&quot;&gt;&lt;a:DataTypeInfo xmlns:b=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Data&quot;&gt;&lt;b:ApplicationType i:nil=&quot;true&quot;/&gt;&lt;b:DataType&gt;&lt;b:Data&gt;System.String&lt;/b:Data&gt;&lt;/b:DataType&gt;&lt;b:DeclType&gt;Text&lt;/b:DeclType&gt;&lt;b:DefaultAggregation&gt;NotSpecified&lt;/b:DefaultAggregation&gt;&lt;b:DefaultDataUnitId i:nil=&quot;true&quot;/&gt;&lt;b:DefaultTransformId i:nil=&quot;true&quot;/&gt;&lt;b:Description/&gt;&lt;b:IsFavorite&gt;false&lt;/b:IsFavorite&gt;&lt;b:IsFilterBy&gt;false&lt;/b:IsFilterBy&gt;&lt;b:IsGroupBy&gt;false&lt;/b:IsGroupBy&gt;&lt;b:IsInherited&gt;false&lt;/b:IsInherited&gt;&lt;b:IsManaged&gt;false&lt;/b:IsManaged&gt;&lt;b:IsStatistic&gt;false&lt;/b:IsStatistic&gt;&lt;b:PreviewValue/&gt;&lt;b:Units/&gt;&lt;b:UtcTimeIsInLocalTime&gt;false&lt;/b:UtcTimeIsInLocalTime&gt;&lt;/a:DataTypeInfo&gt;&lt;a:DisplayName&gt;Error Message&lt;/a:DisplayName&gt;&lt;a:NavigationPath&gt;Components.CurrentStatistics&lt;/a:NavigationPath&gt;&lt;a:OwnerDisplayName&gt;Current Component Statistics&lt;/a:OwnerDisplayName&gt;&lt;a:RefID&gt;&lt;a:Data&gt;Orion.APM.CurrentStatistics|ErrorMessage|Components.CurrentStatistics&lt;/a:Data&gt;&lt;/a:RefID&gt;&lt;/Field&gt;&lt;FixedWidth i:nil=&quot;true&quot;/&gt;&lt;HeaderStyle xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;&gt;&lt;a:BackgroundColor i:nil=&quot;true&quot;/&gt;&lt;a:Borders i:nil=&quot;true&quot;/&gt;&lt;a:DisplayName i:nil=&quot;true&quot;/&gt;&lt;a:Font i:nil=&quot;true&quot;/&gt;&lt;a:Padding i:nil=&quot;true&quot;/&gt;&lt;a:RefId&gt;00000000-0000-0000-0000-000000000000&lt;/a:RefId&gt;&lt;a:TextAlign&gt;Left&lt;/a:TextAlign&gt;&lt;a:ZebraBackgroundColor i:nil=&quot;true&quot;/&gt;&lt;/HeaderStyle&gt;&lt;IsHTMLTagsAllowed&gt;true&lt;/IsHTMLTagsAllowed&gt;&lt;IsHidden&gt;false&lt;/IsHidden&gt;&lt;PercentWidth i:nil=&quot;true&quot;/&gt;&lt;Presenters i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Presentation&quot;/&gt;&lt;PropertyName&gt;Current Component Statistics/Error Message&lt;/PropertyName&gt;&lt;RefId&gt;f28f9292-ce1e-edc6-3111-f6c8fc9035be&lt;/RefId&gt;&lt;Summary&gt;&lt;Calculation&gt;NotSpecified&lt;/Calculation&gt;&lt;CellStyle i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;/&gt;&lt;/Summary&gt;&lt;TransformId/&gt;&lt;ValidRange&gt;NotSpecified&lt;/ValidRange&gt;&lt;/TableColumn&gt;&lt;TableColumn&gt;&lt;CellStyle xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;&gt;&lt;a:BackgroundColor i:nil=&quot;true&quot;/&gt;&lt;a:Borders i:nil=&quot;true&quot;/&gt;&lt;a:DisplayName i:nil=&quot;true&quot;/&gt;&lt;a:Font i:nil=&quot;true&quot;/&gt;&lt;a:Padding i:nil=&quot;true&quot;/&gt;&lt;a:RefId&gt;00000000-0000-0000-0000-000000000000&lt;/a:RefId&gt;&lt;a:TextAlign&gt;Left&lt;/a:TextAlign&gt;&lt;a:ZebraBackgroundColor i:nil=&quot;true&quot;/&gt;&lt;/CellStyle&gt;&lt;DataColumnName i:nil=&quot;true&quot;/&gt;&lt;DisplayName&gt;Total Jobs&lt;/DisplayName&gt;&lt;Field xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Selection&quot;&gt;&lt;a:DataTypeInfo xmlns:b=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Data&quot;&gt;&lt;b:ApplicationType i:nil=&quot;true&quot;/&gt;&lt;b:DataType&gt;&lt;b:Data&gt;System.Double&lt;/b:Data&gt;&lt;/b:DataType&gt;&lt;b:DeclType&gt;Float&lt;/b:DeclType&gt;&lt;b:DefaultAggregation&gt;NotSpecified&lt;/b:DefaultAggregation&gt;&lt;b:DefaultDataUnitId i:nil=&quot;true&quot;/&gt;&lt;b:DefaultTransformId i:nil=&quot;true&quot;/&gt;&lt;b:Description/&gt;&lt;b:IsFavorite&gt;false&lt;/b:IsFavorite&gt;&lt;b:IsFilterBy&gt;false&lt;/b:IsFilterBy&gt;&lt;b:IsGroupBy&gt;false&lt;/b:IsGroupBy&gt;&lt;b:IsInherited&gt;false&lt;/b:IsInherited&gt;&lt;b:IsManaged&gt;false&lt;/b:IsManaged&gt;&lt;b:IsStatistic&gt;false&lt;/b:IsStatistic&gt;&lt;b:PreviewValue/&gt;&lt;b:Units/&gt;&lt;b:UtcTimeIsInLocalTime&gt;false&lt;/b:UtcTimeIsInLocalTime&gt;&lt;/a:DataTypeInfo&gt;&lt;a:DisplayName&gt;Statistic Data&lt;/a:DisplayName&gt;&lt;a:NavigationPath&gt;Components.CurrentStatistics&lt;/a:NavigationPath&gt;&lt;a:OwnerDisplayName&gt;Current Component Statistics&lt;/a:OwnerDisplayName&gt;&lt;a:RefID&gt;&lt;a:Data&gt;Orion.APM.CurrentStatistics|ComponentStatisticData|Components.CurrentStatistics&lt;/a:Data&gt;&lt;/a:RefID&gt;&lt;/Field&gt;&lt;FixedWidth i:nil=&quot;true&quot;/&gt;&lt;HeaderStyle xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;&gt;&lt;a:BackgroundColor i:nil=&quot;true&quot;/&gt;&lt;a:Borders i:nil=&quot;true&quot;/&gt;&lt;a:DisplayName i:nil=&quot;true&quot;/&gt;&lt;a:Font i:nil=&quot;true&quot;/&gt;&lt;a:Padding i:nil=&quot;true&quot;/&gt;&lt;a:RefId&gt;00000000-0000-0000-0000-000000000000&lt;/a:RefId&gt;&lt;a:TextAlign&gt;Left&lt;/a:TextAlign&gt;&lt;a:ZebraBackgroundColor i:nil=&quot;true&quot;/&gt;&lt;/HeaderStyle&gt;&lt;IsHTMLTagsAllowed&gt;false&lt;/IsHTMLTagsAllowed&gt;&lt;IsHidden&gt;false&lt;/IsHidden&gt;&lt;PercentWidth i:nil=&quot;true&quot;/&gt;&lt;Presenters i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Presentation&quot;/&gt;&lt;PropertyName&gt;Current Component Statistics/Statistic Data&lt;/PropertyName&gt;&lt;RefId&gt;060e090e-b09c-a341-b647-e13b069c623e&lt;/RefId&gt;&lt;Summary&gt;&lt;Calculation&gt;NotSpecified&lt;/Calculation&gt;&lt;CellStyle i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;/&gt;&lt;/Summary&gt;&lt;TransformId/&gt;&lt;ValidRange&gt;NotSpecified&lt;/ValidRange&gt;&lt;/TableColumn&gt;&lt;/Columns&gt;&lt;DefaultStyle i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Styles&quot;/&gt;&lt;Filter xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Selection&quot;&gt;&lt;a:Expression i:nil=&quot;true&quot;/&gt;&lt;a:Limit&gt;&lt;a:Count i:nil=&quot;true&quot;/&gt;&lt;a:Mode&gt;ShowAll&lt;/a:Mode&gt;&lt;a:OrionServerIDsToIgnore i:nil=&quot;true&quot;/&gt;&lt;a:Percentage i:nil=&quot;true&quot;/&gt;&lt;/a:Limit&gt;&lt;/Filter&gt;&lt;Indents/&gt;&lt;Sorts xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Selection&quot;/&gt;&lt;SummarizeMode&gt;NoDataSummarization&lt;/SummarizeMode&gt;&lt;TimeField i:nil=&quot;true&quot; xmlns:a=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Selection&quot;/&gt;&lt;/TableConfiguration&gt;"></Property>
+							<Property Name="subtitle" Value=""></Property>
+							<Property Name="dynamicdatasource" Value="True"></Property>
+							<Property Name="datasource" Value="&lt;DataSource xmlns:i=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xmlns=&quot;http://schemas.datacontract.org/2004/07/SolarWinds.Reporting.Models.Selection&quot;&gt;&#xD;&#xA;  &lt;CommandText i:nil=&quot;true&quot; /&gt;&#xD;&#xA;  &lt;DynamicSelectionType&gt;Undefined&lt;/DynamicSelectionType&gt;&#xD;&#xA;  &lt;EntityUri xmlns:d2p1=&quot;http://schemas.microsoft.com/2003/10/Serialization/Arrays&quot;&gt;&#xD;&#xA;    &lt;d2p1:string&gt;swis://VT-A-SRV-MON01.login.top.no/Orion/Orion.Nodes/NodeID=3253/Applications/ApplicationID=541&lt;/d2p1:string&gt;&#xD;&#xA;  &lt;/EntityUri&gt;&#xD;&#xA;  &lt;Filter i:nil=&quot;true&quot; /&gt;&#xD;&#xA;  &lt;MasterEntity&gt;Orion.APM.GenericApplication&lt;/MasterEntity&gt;&#xD;&#xA;  &lt;Name&gt;Printer spool jobs&lt;/Name&gt;&#xD;&#xA;  &lt;NetObjectId i:nil=&quot;true&quot; /&gt;&#xD;&#xA;  &lt;RefId&gt;03a4466e-8dc0-436b-89db-5163aed79135&lt;/RefId&gt;&#xD;&#xA;  &lt;Type&gt;Entities&lt;/Type&gt;&#xD;&#xA;&lt;/DataSource&gt;"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="2" File="/Orion/NetPerfMon/Resources/Misc/XuiWrapper.ascx" Name="Application Connections" Position="2" SubTitle="Dependencies - Shows Connection Quality To/From Apps &amp; Nodes" Title="Application Connections">
+						<Properties>
+							<Property Name="selector" Value="samadm-connections-widget"></Property>
+							<Property Name="stylepaths" Value="/ui/modules/sam.adm.incoming.connections.resource/css/widgets/connectionsWidget.min.css"></Property>
+							<Property Name="scriptpaths" Value="/ui/modules/sam.adm.incoming.connections.resource/js/widgets/connectionsWidget.min.js"></Property>
+							<Property Name="helplinkfragment" Value="OrionSamAdmNodesResource"></Property>
+							<Property Name="defaulttitle" Value="Application Connections"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="2" File="~/Orion/NetPerfMon/Resources/AppStack/AppStack.ascx" Name="Environment for ${Caption}" Position="3" SubTitle="" Title="AppStack Environment for ${Caption}">
+						<Properties>
+							<Property Name="defaulttitle" Value="AppStack Environment for ${Caption}"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="2" File="~/Orion/APM/Resources/Application/AllPortMonitors.ascx" Name="Components" Position="4" SubTitle="" Title="Components">
+						<Properties>
+							<Property Name="defaulttitle" Value="Components"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="2" File="/Orion/APM/Resources/Charting/AvailabilityChart.ascx" Name="Application Availability" Position="5" SubTitle="" Title="Application Availability">
+						<Properties>
+							<Property Name="netobjectprefix" Value="AAAA"></Property>
+							<Property Name="chartsubtitle" Value="${ZoomRange}"></Property>
+							<Property Name="chartname" Value="APMApplicationAvailability"></Property>
+							<Property Name="chartdatespan" Value="1"></Property>
+							<Property Name="samplesize" Value="60"></Property>
+							<Property Name="showtitle" Value="1"></Property>
+							<Property Name="defaulttitle" Value="Application Availability"></Property>
+							<Property Name="charttitle" Value="${Caption}"></Property>
+						</Properties>
+					</Resource>
+					<Resource Column="2" File="/Orion/NetPerfMon/Resources/NodeDetails/CPUMemory.ascx" Name="CPU Load &amp; Memory Statistics" Position="6" SubTitle="" Title="CPU Load &amp; Memory Statistics">
+						<Properties>
+							<Property Name="defaulttitle" Value="CPU Load &amp; Memory Statistics"></Property>
+						</Properties>
+					</Resource>
+				</Resources>
+			</View>
+		</ViewXml>
+		<ModuleVersion xmlns:d="http://schemas.datacontract.org/2004/07/System">
+			<d:_Build>0</d:_Build>
+			<d:_Major>2020</d:_Major>
+			<d:_Minor>2</d:_Minor>
+			<d:_Revision>15513</d:_Revision>
+		</ModuleVersion>
+		<UniqueId>ccdcc677-8a0e-418a-94b2-07ece5b3d0df</UniqueId>
+	</ApplicationTemplate>
+</ArrayOfApplicationTemplate>
