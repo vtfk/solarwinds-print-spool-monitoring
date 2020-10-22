@@ -95,10 +95,10 @@ function BytesToHuman {
     Param (
         $Size
     )
-    $1TB = [Math]::Pow(10,12)
-    $1GB = [Math]::Pow(10,9)
-    $1MB = [Math]::Pow(10,6)
-    $1KB = [Math]::Pow(10,3)
+    $1TB = [Math]::Pow(1024,4)
+    $1GB = [Math]::Pow(1024,3)
+    $1MB = [Math]::Pow(1024,2)
+    $1KB = 1024
     
     if ($Size -gt $1TB) { return "$([math]::Round($Size / $1TB, 2)) TB" }
     if ($Size -gt $1GB) { return "$([math]::Round($Size / $1GB, 2)) GB" }
@@ -113,13 +113,13 @@ $DisplayMessages = $PrintJobs | ForEach {
     $Iteration++
     if ($_.Size -ge $SizeLimit) {
         $JobsOverLimit++
-        "&lt;tr style=`"color:Red;font-weight:bold;`"&gt;&lt;td&gt;$($_.Id)&lt;/td&gt;&lt;td&gt;$($_.JobStatus)&lt;/td&gt;&lt;td&gt;$(BytesToHuman($_.Size))&lt;/td&gt;&lt;/tr&gt;"
+        "<tr style=`"color:Red;font-weight:bold;`"><td>$($_.Id)</td><td>$($_.JobStatus)</td><td>$(BytesToHuman($_.Size))</td></tr>"
     } else {
-        "&lt;tr&gt;&lt;td&gt;$($_.Id)&lt;/td&gt;&lt;td&gt;$($_.JobStatus)&lt;/td&gt;&lt;td&gt;$(BytesToHuman($_.Size))&lt;/td&gt;&lt;/tr&gt;"
+        "<tr><td>$($_.Id)</td><td>$($_.JobStatus)</td><td>$(BytesToHuman($_.Size))</td></tr>"
     }
 }
 
-$DisplayMessages = "&lt;style type=`"text/css`"&gt;.tg{border-collapse:collapse;border-spacing:0;}.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;overflow:hidden;padding:10px 5px;word-break:normal;}.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}.tg .tg-0lax{text-align:left;vertical-align:top}&lt;/style&gt;&lt;table class=`"tg`"&gt;&lt;thead&gt;&lt;tr&gt;&lt;th class=`"tg-0lax`"&gt;Job ID&lt;/th&gt;&lt;th class=`"tg-0lax`"&gt;Status&lt;/th&gt;&lt;th class=`"tg-0lax`"&gt;Size&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;$DisplayMessages&lt;/tbody&gt;&lt;/table&gt;"
+$DisplayMessages = "<style type=`"text/css`">.tg{border-collapse:collapse;border-spacing:0;}.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;overflow:hidden;padding:10px 5px;word-break:normal;}.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}.tg .tg-0lax{text-align:left;vertical-align:top}</style><table class=`"tg`"><thead><tr><th class=`"tg-0lax`">Job ID</th><th class=`"tg-0lax`">Status</th><th class=`"tg-0lax`">Size</th></tr></thead><tbody>$DisplayMessages</tbody></table>"
 $DisplayMessages | Set-Clipboard
 
 Write-Host "Message.AllJobs: $DisplayMessages"
@@ -129,7 +129,7 @@ if ($JobsOverLimit -gt 0) {
     exit 2
 } else {
     exit 0
-}  
+}
 </Value>
 							<ValueType>External</ValueType>
 							<Key>ScriptBody</Key>

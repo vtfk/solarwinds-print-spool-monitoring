@@ -1,4 +1,4 @@
-﻿ Param (
+﻿  Param (
     $PrintQueue,
     $SizeLimit
 )
@@ -19,10 +19,10 @@ function BytesToHuman {
     Param (
         $Size
     )
-    $1TB = [Math]::Pow(10,12)
-    $1GB = [Math]::Pow(10,9)
-    $1MB = [Math]::Pow(10,6)
-    $1KB = [Math]::Pow(10,3)
+    $1TB = [Math]::Pow(1024,4)
+    $1GB = [Math]::Pow(1024,3)
+    $1MB = [Math]::Pow(1024,2)
+    $1KB = 1024
     
     if ($Size -gt $1TB) { return "$([math]::Round($Size / $1TB, 2)) TB" }
     if ($Size -gt $1GB) { return "$([math]::Round($Size / $1GB, 2)) GB" }
@@ -53,4 +53,4 @@ if ($JobsOverLimit -gt 0) {
     exit 2
 } else {
     exit 0
-} 
+}  
